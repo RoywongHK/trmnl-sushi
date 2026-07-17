@@ -14,16 +14,16 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # 1. 重新用最穩定的方式安裝開源中文字型
-      - name: Install Stable Chinese Fonts
+      # 1. 下載 Linux 系統最標準的中文字型包
+      - name: Install Fonts
         run: |
           sudo apt-get update
-          sudo apt-get install -y fonts-wqy-microhei fonts-wqy-zenhei
+          sudo apt-get install -y fonts-wqy-zenhei
 
       - name: Install Dependencies
         run: |
           npm init -y
-          npm install puppeteer axios form-data
+          npm install puppeteer
 
       - name: Take Screenshot
         run: |
@@ -32,66 +32,21 @@ jobs:
           (async () => {
             const browser = await puppeteer.launch({ 
               headless: true,
-              args: [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox',
-                '--font-render-hinting=none' // 停用渲染優化，防止 Linux 字型錯亂
-              ]
+              args: ['--no-sandbox', '--disable-setuid-sandbox']
             });
             const page = await browser.newPage();
             
-            // 設定屏幕標準解析度
+            // 2. 透過設定 Header 確保網站載入繁體中文
+            await page.setExtraHTTPHeaders({ 'Accept-Language': 'zh-HK,zh;q=0.9' });
             await page.setViewport({ width: 800, height: 480 });
-            await page.goto('https://web.app', { waitUntil: 'networkidle0' });
             
-            // 2. 移除會被阻擋的 @import，改為純佈局優化 CSS
-            await page.addStyleTag({ content: `
-              /* 強制全面套用 Linux 的文泉驛微米黑中文字體 */
-              * {
-                font-family: 'WenQuanYi Micro Hei', 'WenQuanYi Zen Hei', sans-serif !important;
-              }
-
-              /* 強制全局變黑白 */
-              body { 
-                filter: grayscale(100%) !important; 
-                background: #ffffff !important;
-                padding: 10px !important;
-                margin: 0 !important;
-              }
-              
-              /* 隱藏不必要的網頁元件 */
-              h1, h2, h3, h4, h5, h6,
-              .text-muted, p, footer, hr,
-              .alert, .btn, .nav, .navbar,
-              caption, .badge-info,
-              div:has(> p) { 
-                display: none !important; 
-              }
-              
-              /* 放大排隊主表格 */
-              table { 
-                width: 100% !important; 
-                font-size: 26px !important; 
-                font-weight: bold !important;
-                border-collapse: collapse !important;
-              }
-              
-              /* 加粗加深表格框線 */
-              th, td { 
-                border: 2px solid #000000 !important; 
-                padding: 12px 8px !important;
-                color: #000000 !important;
-                text-align: center !important;
-              }
-              
-              th {
-                font-size: 28px !important;
-                background-color: #eeeeee !important;
-              }
-            ` });
-
-            // 穩定等待 6 秒確保資料完全加載
+            await page.goto('https://sushirolic.web.app/desktop.html', { waitUntil: 'networkidle0' });
+            
+            // 3. 穩定等待 6 秒，確保 Firebase 數據與中文字型完全結合
             await new Promise(r => setTimeout(r, 6000));
+            
+            // 4. 極簡黑白濾鏡，避免引發 CSS 語法崩潰
+            await page.addStyleTag({ content: 'body { filter: grayscale(100%) !important; }' });
             
             await page.screenshot({ path: 'sushi.png' });
             await browser.close();
@@ -103,5 +58,5 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add sushi.png
-          git commit -m "Fix layout and use local Linux Chinese fonts" || exit 0
+          git commit -m "Fix Chinese font bug" || exit 0
           git push
