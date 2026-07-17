@@ -4,13 +4,16 @@ on:
     - cron: '*/15 * * * *'
   workflow_dispatch:
 
+# 核心修正：明確宣告此任務擁有代碼庫的寫入權限
+permissions:
+  contents: write
+
 jobs:
   screenshot:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-        # 移除了舊版的 node-version 指定，直接讓系統全面對齊 Node 24
 
       - name: Install Dependencies
         run: |
@@ -22,21 +25,14 @@ jobs:
           node -e "
           const puppeteer = require('puppeteer');
           (async () => {
-            // 2026 新版 Puppeteer 在 Linux 環境必須停用沙盒 (sandbox) 才能正常啟動
             const browser = await puppeteer.launch({ 
               headless: true,
               args: ['--no-sandbox', '--disable-setuid-sandbox']
             });
             const page = await browser.newPage();
             await page.setViewport({ width: 800, height: 480 });
-            
-            // 前往壽司郎排隊網頁，並等待所有網路請求完成
             await page.goto('https://web.app', { waitUntil: 'networkidle0' });
-            
-            // 注入 CSS 讓畫面強制變黑白，更適合電子墨水屏
             await page.addStyleTag({ content: 'body { filter: grayscale(100%) !important; }' });
-            
-            // 截圖儲存
             await page.screenshot({ path: 'sushi.png' });
             await browser.close();
           })();
