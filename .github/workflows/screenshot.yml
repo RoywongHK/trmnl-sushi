@@ -4,7 +4,6 @@ on:
     - cron: '*/15 * * * *'
   workflow_dispatch:
 
-# 核心修正：明確宣告此任務擁有代碼庫的寫入權限
 permissions:
   contents: write
 
@@ -30,9 +29,20 @@ jobs:
               args: ['--no-sandbox', '--disable-setuid-sandbox']
             });
             const page = await browser.newPage();
+            
+            // 1. 設定符合 TRMNL 的 800x480 解析度
             await page.setViewport({ width: 800, height: 480 });
-            await page.goto('https://web.app', { waitUntil: 'networkidle0' });
+            
+            // 2. 修正網址：前往真正的壽司郎排隊頁面
+            await page.goto('https://sushirolic.web.app/desktop.html', { waitUntil: 'networkidle0' });
+            
+            // 3. 額外等待 5 秒，確保動態排隊資料完全載入完畢
+            await new Promise(r => setTimeout(r, 5000));
+            
+            // 4. 強制變黑白
             await page.addStyleTag({ content: 'body { filter: grayscale(100%) !important; }' });
+            
+            // 5. 截圖儲存
             await page.screenshot({ path: 'sushi.png' });
             await browser.close();
           })();
