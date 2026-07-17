@@ -14,6 +14,12 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # 核心修正：為 Linux 系統安裝中文字型，防止亂碼和豆腐塊
+      - name: Install Chinese Fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-wqy-zenhei
+
       - name: Install Dependencies
         run: |
           npm init -y
@@ -30,19 +36,15 @@ jobs:
             });
             const page = await browser.newPage();
             
-            // 1. 設定符合 TRMNL 的 800x480 解析度
             await page.setViewport({ width: 800, height: 480 });
+            await page.goto('https://web.app', { waitUntil: 'networkidle0' });
             
-            // 2. 修正網址：前往真正的壽司郎排隊頁面
-            await page.goto('https://sushirolic.web.app/desktop.html', { waitUntil: 'networkidle0' });
-            
-            // 3. 額外等待 5 秒，確保動態排隊資料完全載入完畢
+            // 額外等待 5 秒確保資料加載完畢
             await new Promise(r => setTimeout(r, 5000));
             
-            // 4. 強制變黑白
+            // 強制變黑白
             await page.addStyleTag({ content: 'body { filter: grayscale(100%) !important; }' });
             
-            // 5. 截圖儲存
             await page.screenshot({ path: 'sushi.png' });
             await browser.close();
           })();
@@ -53,5 +55,5 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add sushi.png
-          git commit -m "Update sushi queue screenshot" || exit 0
+          git commit -m "Update sushi queue screenshot with Chinese fonts" || exit 0
           git push
