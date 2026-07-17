@@ -14,6 +14,12 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # 1. 重新用最穩定的方式安裝開源中文字型
+      - name: Install Stable Chinese Fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-wqy-microhei fonts-wqy-zenhei
+
       - name: Install Dependencies
         run: |
           npm init -y
@@ -26,7 +32,11 @@ jobs:
           (async () => {
             const browser = await puppeteer.launch({ 
               headless: true,
-              args: ['--no-sandbox', '--disable-setuid-sandbox']
+              args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox',
+                '--font-render-hinting=none' // 停用渲染優化，防止 Linux 字型錯亂
+              ]
             });
             const page = await browser.newPage();
             
@@ -34,16 +44,14 @@ jobs:
             await page.setViewport({ width: 800, height: 480 });
             await page.goto('https://web.app', { waitUntil: 'networkidle0' });
             
-            // 核心修正：直接注入 Google 思源黑體網路字型，100% 解決 Linux 中文不顯示問題
+            // 2. 移除會被阻擋的 @import，改為純佈局優化 CSS
             await page.addStyleTag({ content: `
-              @import url('https://googleapis.com');
-              
-              /* 強制所有文字套用思源黑體 */
+              /* 強制全面套用 Linux 的文泉驛微米黑中文字體 */
               * {
-                font-family: 'Noto Sans TC', sans-serif !important;
+                font-family: 'WenQuanYi Micro Hei', 'WenQuanYi Zen Hei', sans-serif !important;
               }
 
-              /* 1. 強制全局變黑白 */
+              /* 強制全局變黑白 */
               body { 
                 filter: grayscale(100%) !important; 
                 background: #ffffff !important;
@@ -51,7 +59,7 @@ jobs:
                 margin: 0 !important;
               }
               
-              /* 2. 隱藏不必要的網頁元件（標題、副標題、說明文字、頁尾） */
+              /* 隱藏不必要的網頁元件 */
               h1, h2, h3, h4, h5, h6,
               .text-muted, p, footer, hr,
               .alert, .btn, .nav, .navbar,
@@ -60,15 +68,15 @@ jobs:
                 display: none !important; 
               }
               
-              /* 3. 放大排隊主表格，使其撐滿 800x480 空間 */
+              /* 放大排隊主表格 */
               table { 
                 width: 100% !important; 
                 font-size: 26px !important; 
-                font-weight: 700 !important;
+                font-weight: bold !important;
                 border-collapse: collapse !important;
               }
               
-              /* 4. 加粗加深表格框線，防止電子墨水屏線條過淡 */
+              /* 加粗加深表格框線 */
               th, td { 
                 border: 2px solid #000000 !important; 
                 padding: 12px 8px !important;
@@ -76,14 +84,13 @@ jobs:
                 text-align: center !important;
               }
               
-              /* 5. 放大表格標頭文字 */
               th {
                 font-size: 28px !important;
                 background-color: #eeeeee !important;
               }
             ` });
 
-            // 額外等待 6 秒，確保動態排隊資料以及網路中文型體都 100% 載入完畢
+            // 穩定等待 6 秒確保資料完全加載
             await new Promise(r => setTimeout(r, 6000));
             
             await page.screenshot({ path: 'sushi.png' });
@@ -96,5 +103,5 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add sushi.png
-          git commit -m "Fix Chinese fonts using Google Fonts API" || exit 0
+          git commit -m "Fix layout and use local Linux Chinese fonts" || exit 0
           git push
