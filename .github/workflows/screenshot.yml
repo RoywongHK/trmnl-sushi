@@ -1,9 +1,8 @@
 name: Auto Screenshot Sushi
 on:
   schedule:
-    # 每 15 分鐘自動執行一次 (可根據需求調整)
     - cron: '*/15 * * * *'
-  workflow_dispatch: # 允許手動點擊按鈕執行
+  workflow_dispatch:
 
 jobs:
   screenshot:
@@ -11,25 +10,27 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        # 移除了舊版的 node-version 指定，直接讓系統全面對齊 Node 24
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Install Puppeteer
-        run: npm install puppeteer
+      - name: Install Dependencies
+        run: |
+          npm init -y
+          npm install puppeteer axios form-data
 
       - name: Take Screenshot
         run: |
           node -e "
           const puppeteer = require('puppeteer');
           (async () => {
-            const browser = await puppeteer.launch({ headless: 'new' });
+            // 2026 新版 Puppeteer 在 Linux 環境必須停用沙盒 (sandbox) 才能正常啟動
+            const browser = await puppeteer.launch({ 
+              headless: true,
+              args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
             const page = await browser.newPage();
             await page.setViewport({ width: 800, height: 480 });
             
-            // 載入壽司郎排隊網頁，並等待所有網路請求完成（確保JS載入完畢）
+            // 前往壽司郎排隊網頁，並等待所有網路請求完成
             await page.goto('https://web.app', { waitUntil: 'networkidle0' });
             
             // 注入 CSS 讓畫面強制變黑白，更適合電子墨水屏
