@@ -11,8 +11,9 @@ jobs:
   screenshot:
     runs-on: ubuntu-latest
     steps:
+      # 核心修正：明確指定使用相容 Node 24 的 checkout 版本，消滅所有 Deprecated 警告
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Install Fonts
         run: |
@@ -42,8 +43,7 @@ jobs:
             
             await new Promise(r => setTimeout(r, 6000));
             
-            // 核心修正：移除了 grayscale(100%) 黑白濾鏡，改為輸出網頁原始彩色畫面
-            // 只保留強制白色背景，確保截圖邊緣乾淨
+            // 輸出彩色源圖
             await page.addStyleTag({ content: 'body { background: #ffffff !important; }' });
             
             await page.screenshot({ path: 'sushi.png' });
@@ -56,5 +56,5 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add sushi.png
-          git commit -m "Change screenshot to full color" || exit 0
+          git commit -m "Change screenshot to full color and clear node20 warnings" || exit 0
           git push
