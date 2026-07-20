@@ -46,7 +46,7 @@ jobs:
             await new Promise(r => setTimeout(r, 6000));
             
             // 4. 極簡黑白濾鏡，避免引發 CSS 語法崩潰
-            await page.addStyleTag({ content: 'body { filter: grayscale(100%) !important; }' });
+            await page.addStyleTag({ content: 'body { background: #ffffff !important; }' });
             
             await page.screenshot({ path: 'sushi.png' });
             await browser.close();
