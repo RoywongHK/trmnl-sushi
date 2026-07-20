@@ -11,10 +11,10 @@ jobs:
   screenshot:
     runs-on: ubuntu-latest
     steps:
-      # 核心修正：明確指定使用相容 Node 24 的 checkout 版本，消滅所有 Deprecated 警告
       - name: Checkout repo
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
+      # 1. 下載 Linux 系統最標準的中文字型包
       - name: Install Fonts
         run: |
           sudo apt-get update
@@ -36,15 +36,17 @@ jobs:
             });
             const page = await browser.newPage();
             
+            // 2. 透過設定 Header 確保網站載入繁體中文
             await page.setExtraHTTPHeaders({ 'Accept-Language': 'zh-HK,zh;q=0.9' });
             await page.setViewport({ width: 800, height: 480 });
             
-            await page.goto('https://web.app', { waitUntil: 'networkidle0' });
+            await page.goto('https://sushirolic.web.app/desktop.html', { waitUntil: 'networkidle0' });
             
+            // 3. 穩定等待 6 秒，確保 Firebase 數據與中文字型完全結合
             await new Promise(r => setTimeout(r, 6000));
             
-            // 輸出彩色源圖
-            await page.addStyleTag({ content: 'body { background: #ffffff !important; }' });
+            // 4. 極簡黑白濾鏡，避免引發 CSS 語法崩潰
+            await page.addStyleTag({ content: 'body { filter: grayscale(100%) !important; }' });
             
             await page.screenshot({ path: 'sushi.png' });
             await browser.close();
@@ -56,5 +58,5 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add sushi.png
-          git commit -m "Change screenshot to full color and clear node20 warnings" || exit 0
+          git commit -m "Fix Chinese font bug" || exit 0
           git push
